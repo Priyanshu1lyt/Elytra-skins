@@ -1,0 +1,67 @@
+plugins {
+    id 'fabric-loom' version "${loom_version}"
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
+repositories {
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+// Generates the mod icon (128x128 PNG) at build time so no binary file is needed in git.
+def iconOut = layout.buildDirectory.dir('generated/icon')
+def generateIcon = tasks.register('generateIcon') {
+    outputs.dir(iconOut)
+    doLast {
+        System.setProperty('java.awt.headless', 'true')
+        int S = 128
+        def img = new java.awt.image.BufferedImage(S, S, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        def g = img.createGraphics()
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON)
+        g.setPaint(new java.awt.GradientPaint(0f, 0f, new java.awt.Color(0x0B0B2E), 0f, (float) S, new java.awt.Color(0x5A2FA0)))
+        g.fillRoundRect(0, 0, S, S, 24, 24)
+        [-1, 1].each { int dir ->
+            int[] xs = [64, 64 + dir * 8, 64 + dir * 56, 64 + dir * 44, 64 + dir * 20]
+            int[] ys = [28, 22, 70, 112, 100]
+            g.setPaint(new java.awt.GradientPaint(0f, 20f, new java.awt.Color(0x00E5FF), 0f, 112f, new java.awt.Color(0xFF2BD6)))
+            g.fillPolygon(xs, ys, 5)
+            g.setPaint(new java.awt.Color(255, 255, 255, 140))
+            g.setStroke(new java.awt.BasicStroke(2f))
+            g.drawPolygon(xs, ys, 5)
+        }
+        g.dispose()
+        def f = new File(iconOut.get().asFile, 'assets/elytraskins/icon.png')
+        f.parentFile.mkdirs()
+        javax.imageio.ImageIO.write(img, 'png', f)
+    }
+}
+sourceSets.main.resources.srcDir(generateIcon)
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": inputs.properties.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.release = 21
+    it.options.encoding = 'UTF-8'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
